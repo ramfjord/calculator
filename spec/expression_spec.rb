@@ -2,18 +2,6 @@
 require File.dirname(__FILE__) + '/../Expression'
 
 describe Expression do
-	describe "atoms: " do
-		it "should create a atomic expression with a Fixnum" do
-			e = Expression.new(5)
-			e.should be_atom
-		end
-
-		it "should create a atomic expression with a Symbol" do
-			e = Expression.new(:a)
-			e.should be_atom
-		end
-	end
-
 	describe "binary expressions: " do
 		before(:each) do
 			@e1 = 5
@@ -22,8 +10,13 @@ describe Expression do
 		end
 
 		it "should create a binary expression with Fixnums and Symbols" do
+			lambda{e = Expression.new(@e1, @op, @e2)}.should_not raise_error
+		end
+
+		it "should create a binary expression with other expressions" do
 			e = Expression.new(@e1, @op, @e2)
-			e.should_not be_atom
+			e2 = Expression.new(5, "-", 56)
+			lambda{e3 = Expression.new(e, "*", e2)}.should_not raise_error
 		end
 
 		it "shold not create binary expression with invalid operators" do
@@ -40,6 +33,23 @@ describe Expression do
 		it "should not create unary expressions with incorrect operators" do
 			#e = Expression.new(@e1, '+', nil)
 			lambda{Expression.new(5, '+', nil)}.should raise_error
+		end
+	end
+
+	describe "resolution:" do
+		before(:each) do
+			@e1 = Expression.new(5, "+", 3)
+			@e2 = Expression.new(@e1, "-", 6)
+			@e1ans = 8
+			@e2ans = 2
+		end
+
+		it "should be able to resolve numeric expressions 1 level deep" do
+			@e1.resolve.should == @e1ans
+		end
+
+		it "should be able to resolve numeric expressions multiple levels deep" do
+			@e2.resolve.should == @e2ans
 		end
 	end
 end

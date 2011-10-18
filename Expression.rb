@@ -17,8 +17,7 @@ $operations = {
 	:cot => { :properties => [ :unary ].to_set,															:order => 2 },
 }
 
-	
-
+$atoms = [ Fixnum, Symbol ].to_set
 
 # A recursive data structure contains an expression, an operator, and another expression
 class Expression
@@ -39,28 +38,46 @@ class Expression
 	end
 
 	def self.parse_atom(exp)
-		return exp if exp.is_a?(Fixnum) || exp.is_a?(Symbol)
+		return exp if Expression.atom?(exp)
 		raise "invalid expression class: #{exp.class}"
 	end
 
-	def atom?
-		@op.nil? && @e2.nil?
+	def self.atom?(exp)
+		$atoms.include?(exp.class)
 	end
 
 	def unary?
 		@properties.include?(:unary)
 	end
+	
+	def binary?
+		@properties.include?(:binary)
+	end
 
 	def num?
-		return @e1.is_a?(Fixnum) if self.atom?
-		return @e1.num? if self.unary?
-		@e1.num? && @e2.num?
+		e1_num = Expression.atom?(@e1) ? @e1.is_a?(Fixnum) : @e1.num?
+		return e1_num if unary?
+		
+		e2_num = Expression.atom?(@e2) ? @e2.is_a?(Fixnum) : @e2.num?
+		e1_num && e2_num
 	end
 
 	def to_s
+		# TODO fix with new atom leaves format
 		return @e1.to_s if self.atom?
 		return "(#{@op} #{@e1})" if self.unary?
 		return "(#{@e1} #{@op} #{@e2})"
+	end
+
+	def resolve
+		if num?
+			e1 = Expression.atom?(@e1) ? @e1 : @e1.resolve
+			return e1.send @op if unary?
+
+			e2 = Expression.atom?(@e2) ? @e2 : @e2.resolve
+			return e1.send @op, e2
+		end
+		raise "I don't know how to resolve things with variables yet :("
 	end
 
 	private
