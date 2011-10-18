@@ -45,21 +45,38 @@ describe Expression do
 			@e2ans = 2
 		end
 
+		describe "to_s:" do
+			it "should work" do
+				@e3.to_s.should == "(5 + 3) / ((5 + 3) - 6)"
+			end
+
+			it "should work with logs" do
+				e4 = Expression.new(@e3, "log", 2)
+				e4.to_s.should == "log_2 ((5 + 3) / ((5 + 3) - 6))"
+			end
+		end
+
+		describe "from_s:" do
+			it "should work with flat expressions" do
+				Expression.from_s("5 + 3").to_s.should == @e1.to_s
+			end
+
+			it "should work with deep expressions with correct parentheses" do
+				Expression.from_s("(5 + 3) / ((5 + 3) - 6)").to_s.should == @e3.to_s
+			end
+
+			it "should infer parentheses with the order of operations" do
+				Expression.from_s("4 + 5 * 3").to_s.should == "4 + (5 * 3)"
+				Expression.from_s("4 * 5 + 3").to_s.should == "(4 * 5) * 3"
+			end
+		end
+
 		it "should be able to resolve numeric expressions 1 level deep" do
 			@e1.resolve.should == @e1ans
 		end
 
 		it "should be able to resolve numeric expressions multiple levels deep" do
 			@e2.resolve.should == @e2ans
-		end
-
-		it "to_s should work" do
-			@e3.to_s.should == "(5 + 3) / ((5 + 3) - 6)"
-		end
-
-		it "to_s should work with logs" do
-			e4 = Expression.new(@e3, "log", 2)
-			e4.to_s.should == "log_2 ((5 + 3) / ((5 + 3) - 6))"
 		end
 	end
 end
