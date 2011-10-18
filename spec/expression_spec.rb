@@ -36,10 +36,11 @@ describe Expression do
 		end
 	end
 
-	describe "resolution:" do
+	describe "methods:" do
 		before(:each) do
 			@e1 = Expression.new(5, "+", 3)
 			@e2 = Expression.new(@e1, "-", 6)
+			@e3 = Expression.new(@e1, "/", @e2)
 			@e1ans = 8
 			@e2ans = 2
 		end
@@ -50,6 +51,15 @@ describe Expression do
 
 		it "should be able to resolve numeric expressions multiple levels deep" do
 			@e2.resolve.should == @e2ans
+		end
+
+		it "to_s should work" do
+			@e3.to_s.should == "(5 + 3) / ((5 + 3) - 6)"
+		end
+
+		it "to_s should work with logs" do
+			e4 = Expression.new(@e3, "log", 2)
+			e4.to_s.should == "log_2 ((5 + 3) / ((5 + 3) - 6))"
 		end
 	end
 end

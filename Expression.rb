@@ -55,32 +55,42 @@ class Expression
 	end
 
 	def num?
-		e1_num = Expression.atom?(@e1) ? @e1.is_a?(Fixnum) : @e1.num?
+		e1_num = e1_atom? ? @e1.is_a?(Fixnum) : @e1.num?
 		return e1_num if unary?
 		
-		e2_num = Expression.atom?(@e2) ? @e2.is_a?(Fixnum) : @e2.num?
+		e2_num = e2_atom? ? @e2.is_a?(Fixnum) : @e2.num?
 		e1_num && e2_num
 	end
 
 	def to_s
-		# TODO fix with new atom leaves format
-		return @e1.to_s if self.atom?
-		return "(#{@op} #{@e1})" if self.unary?
-		return "(#{@e1} #{@op} #{@e2})"
+		e1_s = e1_atom? ? @e1.to_s : "(#{@e1})"
+		return "#{@op} #{e1_s}" if unary?
+
+		e2_s = e2_atom? ? @e2.to_s : "(#{@e2})"
+		return "#{e1_s} #{@op} #{e2_s}" unless @op == :log
+		return "log_#{e2_s} #{e1_s}"
 	end
 
 	def resolve
 		if num?
-			e1 = Expression.atom?(@e1) ? @e1 : @e1.resolve
+			e1 = e1_atom? ? @e1 : @e1.resolve
 			return e1.send @op if unary?
 
-			e2 = Expression.atom?(@e2) ? @e2 : @e2.resolve
+			e2 = e2_atom? ? @e2 : @e2.resolve
 			return e1.send @op, e2
 		end
 		raise "I don't know how to resolve things with variables yet :("
 	end
 
 	private
+
+	def e1_atom?
+		Expression.atom?(@e1)
+	end
+
+	def e2_atom?
+		Expression.atom?(@e2)
+	end
 
 	def init_atom(exp)
 		@e1 = Expression.parse_atom(exp)
