@@ -33,7 +33,7 @@ describe Expression do
 
 	describe "unary expressions:" do
 		it "should create unary expressions with correct operators" do
-			e = Expression.new(5, 'sqrt', nil)
+			e = Expression.new(5, 'sin', nil)
 			e.should be_unary
 		end
 

@@ -1,7 +1,30 @@
+require 'set'
+
+# TODO, how to represent distributive property: a(b+c) = ab + ac
+$operations = { 
+	:- => { :properties => [ :binary, :associative ].to_set,								:order => 5 },
+	:+ => { :properties => [ :binary, :associative, :commutative ].to_set,	:order => 5 },
+	:* => { :properties => [ :binary, :associative, :commutative ].to_set,  :order => 3 },
+	:/ => { :properties => [ :binary, :associative ].to_set,                :order => 3 },
+	:^ => { :properties => [ :binary ].to_set,															:order => 1 },
+	:root => { :properties => [ :binary ].to_set,														:order => 1 },
+	:log => { :properties => [ :binary ].to_set,														:order => 2 },
+	:sin => { :properties => [ :unary ].to_set,															:order => 2 },
+	:cos => { :properties => [ :unary ].to_set,															:order => 2 },
+	:tan => { :properties => [ :unary ].to_set,															:order => 2 },
+	:cosec => { :properties => [ :unary ].to_set,														:order => 2 },
+	:sec => { :properties => [ :unary ].to_set,															:order => 2 },
+	:cot => { :properties => [ :unary ].to_set,															:order => 2 },
+}
+
+	
+
+
 # A recursive data structure contains an expression, an operator, and another expression
 class Expression
 	attr_accessor :e1			# expression 1
 	attr_accessor :op			# operator
+	attr_accessor :properties
 	attr_accessor :e2			# expression 2
 
 	def initialize *args
@@ -25,7 +48,7 @@ class Expression
 	end
 
 	def unary?
-		!@op.nil? && @e2.nil?
+		@properties.include?(:unary)
 	end
 
 	def num?
@@ -53,26 +76,9 @@ class Expression
 		if operator.nil? && exp2.nil?
 			@e1 = Expression.parse_atom(exp1)
 		else
-			unary = false
-			case operator
-			when '+'
-				@op = :+
-			when '-'
-				@op = :-
-			when '/'
-				@op = :/
-			when '*'
-				@op = :*
-			when '^'
-				@op = :^
-			when "sqrt" 
-				@op = :sqrt
-				unary = true
-			when "log" 
-				@op = :log
-				unary = true
-			else raise err_prefix + "invalid operator"
-			end
+			raise err_prefix + "invalid operation" if $operations[operator.to_sym].nil?
+			@op = operator.to_sym
+			@properties = $operations[@op][:properties]
 
 			if exp1.is_a?(Expression)
 				@e1 = exp1
@@ -84,7 +90,7 @@ class Expression
 				end
 			end
 
-			if unary
+			if @properties.include?(:unary)
 				@e2 = nil
 			else
 				if exp2.is_a?(Expression)
