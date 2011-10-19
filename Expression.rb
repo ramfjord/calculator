@@ -1,7 +1,7 @@
 require 'set'
 
 # TODO, how to represent distributive property: a(b+c) = ab + ac
-$operations = { 
+$operators = { 
 	:- => { :properties => [ :binary, :associative ].to_set,								:order => 5 },
 	:+ => { :properties => [ :binary, :associative, :commutative ].to_set,	:order => 5 },
 	:* => { :properties => [ :binary, :associative, :commutative ].to_set,  :order => 3 },
@@ -18,20 +18,27 @@ $operations = {
 }
 
 def is_op?(op)
-	$operations[op.to_sym] == nil?
+	return $operators[op.to_sym] != nil
 end
 
 def op_prop?(op, prop)
 	op_s = op.to_sym
-	return (is_op? op) && ($operations[op_s][:properties].include? op_s)
+	return (is_op? op) && ((op_props(op)).include? prop)
 end
 
 def op_props(op)
-	$operations[op.to_sym][:properties]
+	$operators[op.to_sym][:properties]
+end
+
+def op_ord(op)
+	$operators[op.to_sym][:order]
 end
 
 
 $atoms = [ Fixnum, Symbol ].to_set
+
+#TODO unit test this list?
+$reg_chars = [ "\\", "*", "$", "^", "+", "?", ".", "|", "[", "(", ")", "{" ].to_set
 
 # A recursive data structure contains an expression, an operator, and another expression
 class Expression
@@ -51,17 +58,35 @@ class Expression
 		end
 	end
 
-	def self.from_s(s)
-		# do some preprocessing and pass to rec_from_s
-		string_exp = s.gsub(/\s/, " ").squeeze(" ") # remove extraneous spaces
+	def self.sanitize_s(s)
+		# note - could be optimized
+		s_ret = s.gsub(/\s/, " ").squeeze(" ") # remove extraneous whitespace
+		s_ret.gsub!(/\( /, "(")
+		s_ret.gsub!(/ \)/, ")") # remove extraneous paren whitespace
 
-		# TODO preprocess log's into standard format
-		return self.rec_from_s(string_exp)
+		# make sure there's a space around every operator
+		$operators.each_key do |op|
+			if $reg_chars.include? op.to_s
+				op_s = "\\#{op}"
+			else
+				op_s = op.to_s
+			end
+
+			s_ret.gsub!(/#{op_s}([^ ])/, "#{op} \\1")
+
+			if op_prop? op.to_s, :binary
+				s_ret.gsub!(/([^ ])#{op_s}/, "\\1 #{op}")
+			end
+		end
+		
+		return s_ret
 	end
 
-	# add parentheses to make clear the order of operations
-	def self.add_parens(s)
-		raise "method not implemented"
+	def self.from_s(s)
+		string_exp = Expression.sanitize_s(s)
+		string_exp = Expression.add_parens(string_exp)
+		# TODO preprocess log's into standard format
+		return self.rec_from_s(string_exp)
 	end
 
 	def self.is_atom(exp)
@@ -130,7 +155,7 @@ class Expression
 		if operator.nil? && exp2.nil?
 			@e1 = Expression.is_atom(exp1)
 		else
-			raise err_prefix + "invalid operation" if $operations[operator.to_sym].nil?
+			raise err_prefix + "invalid operation" if $operators[operator.to_sym].nil?
 			@op = operator.to_sym
 			@properties = op_props @op
 
@@ -193,6 +218,67 @@ class Expression
 		Expression.new(e1, op, e2)
 	end
 
+	# add parentheses to make clear the order of operations
+	def self.add_parens(s)
+		e1 = Expression.next_expression_chunk(s)
+		if op_prop? e1, :unary
+			rest = s
+		else
+			rest = Expression.get_rest(e1, s)
+		end
+
+
+		e1 = Expression.parens_from_chunk(e1)
+		op = nil
+		prev_ord = 100 # NOTE must be greater than the priority of any operation
+
+		exp_stack = Stack.new(e1)
+		op_stack = Stack.new
+
+		while !rest.empty? do
+			chunk = Expression.next_expression_chunk(rest)
+			rest = Expression.get_rest(chunk, rest)
+
+			if is_op? chunk
+				if prev_ord < (op_ord chunk)
+					e2 = exp_stack.pop
+					op = op_stack.pop
+					e1 = exp_stack.pop
+					exp_stack.push "(#{e1} #{op} #{e2})"
+				end
+				op_stack.push chunk
+				prev_ord = op_ord chunk
+			else
+				exp_stack.push chunk
+			end
+		end
+
+		while !op_stack.empty? do
+			e1 = exp_stack.pop
+			op = op_stack.pop
+			if op_prop? op, :unary
+				exp_stack.push "(#{op} #{e1})"
+			else
+				e2 = exp_stack.pop
+				exp_stack.push "(#{e2} #{op} #{e1})"
+			end
+		end
+
+		return exp_stack.pop[1...-1]
+	end
+
+	def self.parens_from_chunk(s)
+		if s[0] == "("
+			return "(#{Expression.add_parens(s[1...-1])})"
+		else
+			return s
+		end
+	end
+
+	def self.get_rest(exp, s)
+		return s[(exp.length)..-1].lstrip
+	end
+
 	def self.exp_from_chunk(s)
 		if s[0] == "("
 			return Expression.rec_from_s(s[1...-1]) # remove outer parens
@@ -235,5 +321,30 @@ class Expression
 		else
 			return s.to_i
 		end
+	end
+end
+
+class Stack
+	def initialize *args
+		(args.size == 1) ? @stack = [args[0], nil] : @stack = nil
+	end
+
+	def empty?
+		return @stack.nil?
+	end
+
+	def push(pl)
+		@stack = [pl, @stack]
+	end
+
+	def top
+		return @stack[0]
+	end
+
+	def pop
+		return nil if empty?
+		pl = top
+		@stack = @stack[1]
+		return pl
 	end
 end

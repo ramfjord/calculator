@@ -56,6 +56,33 @@ describe Expression do
 			end
 		end
 
+		describe "sanitize_s:" do
+			it "should work with binary operators" do
+				Expression.sanitize_s("5+3	 -4*3").should == "5 + 3 - 4 * 3"
+			end
+
+			it "should work with unary operators" do
+				Expression.sanitize_s("sin		53 cos100").should == "sin 53 cos 100"
+			end
+		end
+
+		describe "add_parens:" do 
+			it "should work on purely unary expressions" do
+				Expression.add_parens("sin cos tan x").should == "sin (cos (tan x))"
+			end
+
+			it "should work on purely binary expressions" do
+				Expression.add_parens("a + b * c - 3 ^ 5 * 3").should == "a + ((b * c) - ((3 ^ 5) * 3))"
+			end
+
+			it "should work on hybrid binary/unary expressions" do
+				Expression.add_parens(
+					"a + b * c - 3 ^ 5 * sin 30 ^ 5"
+				).should == 
+					"a + ((b * c) - ((3 ^ 5) * (sin (30 ^ 5))))"
+			end
+		end
+
 		describe "from_s:" do
 			it "should work with flat expressions" do
 				Expression.from_s("5 + 3").to_s.should == @e1.to_s
@@ -67,7 +94,7 @@ describe Expression do
 
 			it "should infer parentheses with the order of operations" do
 				Expression.from_s("4 + 5 * 3").to_s.should == "4 + (5 * 3)"
-				Expression.from_s("4 * 5 + 3").to_s.should == "(4 * 5) * 3"
+				Expression.from_s("4 * 5 + 3").to_s.should == "(4 * 5) + 3"
 			end
 		end
 
