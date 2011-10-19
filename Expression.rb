@@ -83,8 +83,7 @@ class Expression
 	end
 
 	def self.from_s(s)
-		string_exp = Expression.sanitize_s(s)
-		string_exp = Expression.add_parens(string_exp)
+		string_exp = Expression.add_parens(s)
 		# TODO preprocess log's into standard format
 		return self.rec_from_s(string_exp)
 	end
@@ -220,11 +219,12 @@ class Expression
 
 	# add parentheses to make clear the order of operations
 	def self.add_parens(s)
-		e1 = Expression.next_expression_chunk(s)
+		san = Expression.sanitize_s(s)
+		e1 = Expression.next_expression_chunk(san)
 		if op_prop? e1, :unary
-			rest = s
+			rest = san
 		else
-			rest = Expression.get_rest(e1, s)
+			rest = Expression.get_rest(e1, san)
 		end
 
 
