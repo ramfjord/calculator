@@ -75,6 +75,12 @@ describe Expression do
 				Expression.add_parens("a + b * c - 3 ^ 5 * 3").should == "a + ((b * c) - ((3 ^ 5) * 3))"
 			end
 
+			it "should work with the following" do
+				# this didn't used to work, because it woulnd't condense 5 and x^2 after it read the
+				# :+ in
+				Expression.add_parens("5*x^2 + 3*x").should == "(5 + (x ^ 2)) + (3 * x)"
+			end
+
 			it "should work on hybrid binary/unary expressions" do
 				Expression.add_parens(
 					"a + b * c - 3 ^ 5 * sin 30 ^ 5"

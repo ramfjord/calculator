@@ -133,7 +133,49 @@ class Expression
 		raise "I don't know how to resolve things with variables yet :("
 	end
 
+	# takes the derivative with respect to x, where x is a symbol
+	def deriv(x)
+		raise "method not implemented"
+
+		case (@op.to_sym)
+		when :+
+			return Expression.new(Expression.deriv_h(@e1, x), "+", Expression.deriv_h(@e2, x))
+		when :-
+			return Expression.new(Expression.deriv_h(@e1, x), :+, Expression.deriv_h(@e2, x))
+		when :*
+			return Expression.new(
+				Expression.new(Expression.deriv_h(@e1, x), :*, @e2),
+				:+,
+				Expression.new(@e1, :*, Expression.deriv_h(@e2, x))
+			)
+		when :/
+			return Expression.new(
+				Expression.new(
+					Expression.new(Expression.deriv_h(@e1, x), :*, @e2),
+					:-,
+					Expression.new(@e1, :*, Expression.deriv_h(@e2, x))
+				),
+				:/,
+				Expression.new(@e2, :^, 2)
+			)
+		end
+	end
+
 	# private
+
+	def self.deriv_h(e, x)
+		if Expression.atom? e
+			# if we're derivativng with respect to x
+			# e is either a symbol or a fixnum
+			if e == x.to_sym
+				return 1
+			else
+				return 0
+			end
+		end
+
+		return e.deriv(x)
+	end
 
 	def e1_atom?
 		Expression.atom?(@e1)
@@ -177,7 +219,7 @@ class Expression
 					begin
 						@e2 = Expression.is_atom(exp2)
 					rescue
-						raise err_prefix + "invalid second expression"
+						raise err_prefix + "invalid second expression: #{exp2.inspect}"
 					end
 				end
 			end
@@ -240,11 +282,12 @@ class Expression
 			rest = Expression.get_rest(chunk, rest)
 
 			if is_op? chunk
-				if prev_ord < (op_ord chunk)
+				while prev_ord < (op_ord chunk)
 					e2 = exp_stack.pop
 					op = op_stack.pop
 					e1 = exp_stack.pop
 					exp_stack.push "(#{e1} #{op} #{e2})"
+					prev_ord = op_stack.empty? ? 100 : (op_ord (op_stack.top))
 				end
 				op_stack.push chunk
 				prev_ord = op_ord chunk
