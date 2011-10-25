@@ -134,34 +134,94 @@ class Expression
 	end
 
 	# takes the derivative with respect to x, where x is a symbol
-	def deriv(x)
-		raise "method not implemented"
+	# def deriv(x)
+	# 	raise "method not implemented"
 
-		case (@op.to_sym)
-		when :+
-			return Expression.new(Expression.deriv_h(@e1, x), "+", Expression.deriv_h(@e2, x))
-		when :-
-			return Expression.new(Expression.deriv_h(@e1, x), :+, Expression.deriv_h(@e2, x))
-		when :*
-			return Expression.new(
-				Expression.new(Expression.deriv_h(@e1, x), :*, @e2),
-				:+,
-				Expression.new(@e1, :*, Expression.deriv_h(@e2, x))
-			)
-		when :/
-			return Expression.new(
-				Expression.new(
-					Expression.new(Expression.deriv_h(@e1, x), :*, @e2),
-					:-,
-					Expression.new(@e1, :*, Expression.deriv_h(@e2, x))
-				),
-				:/,
-				Expression.new(@e2, :^, 2)
-			)
+	# 	case (@op.to_sym)
+	# 	when :+
+	# 		return Expression.new(Expression.deriv_h(@e1, x), "+", Expression.deriv_h(@e2, x))
+	# 	when :-
+	# 		return Expression.new(Expression.deriv_h(@e1, x), :+, Expression.deriv_h(@e2, x))
+	# 	when :*
+	# 		return Expression.new(
+	# 			Expression.new(Expression.deriv_h(@e1, x), :*, @e2),
+	# 			:+,
+	# 			Expression.new(@e1, :*, Expression.deriv_h(@e2, x))
+	# 		)
+	# 	when :/
+	# 		return Expression.new(
+	# 			Expression.new(
+	# 				Expression.new(Expression.deriv_h(@e1, x), :*, @e2),
+	# 				:-,
+	# 				Expression.new(@e1, :*, Expression.deriv_h(@e2, x))
+	# 			),
+	# 			:/,
+	# 			Expression.new(@e2, :^, 2)
+	# 		)
+	# 	end
+	# end
+
+	def swap_es
+		tmp = @e1
+		@e1 = @e2
+		@e2 = tmp
+	end
+
+	def simplify_base
+		@e1 = Expression.s_b_h @e1
+		@e2 = Expression.s_b_h @e2
+
+		case @op
+		when :+ then return simp_plus
+		when :- then return simp_min
+		when :* then return simp_mult
+		when :/ then return simp_div
+		when :^ then return simp_pow
+		else return self
 		end
 	end
 
 	# private
+
+	def simp_mult
+		return self unless @op == :*
+		return @e2 if @e1 == 1
+		return @e1 if @e2 == 1
+		return 0 if (@e1 == 0 || @e2 == 0)
+		self
+	end
+
+	def simp_div
+		return self unless @op == :/
+		return @e1 if @e2 == 1
+		return 0 if @e1 == 0
+		self
+	end
+
+	def simp_plus
+		return self unless @op == :+
+		return @e2 if @e1 == 0
+		return @e1 if @e2 == 0
+		self
+	end
+
+	def simp_min
+		return self unless @op == :-
+		return @e1 if @e2 == 0
+		self
+	end
+
+	def simp_pow
+		return self unless @op == :^
+		return @e1 if @e2 == 1
+		return 1 if @e2 == 0
+		self
+	end
+
+	# simplify_base helper
+	def self.s_b_h(e)
+		(Expression.atom? e) ? e : e.simplify_base
+	end
 
 	def self.deriv_h(e, x)
 		if Expression.atom? e
@@ -369,7 +429,8 @@ end
 
 class Stack
 	def initialize *args
-		(args.size == 1) ? @stack = [args[0], nil] : @stack = nil
+		@stack = nil
+		args.each { |pl| push pl } # pl = payload in my head
 	end
 
 	def empty?
@@ -381,13 +442,12 @@ class Stack
 	end
 
 	def top
-		return @stack[0]
+		(empty?) ? nil : @stack[0]
 	end
 
 	def pop
-		return nil if empty?
 		pl = top
-		@stack = @stack[1]
+		@stack = @stack[1] unless empty?
 		return pl
 	end
 end

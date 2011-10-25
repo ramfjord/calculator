@@ -1,4 +1,3 @@
-#require File.dirname(__FILE__) + '/spec_helper'
 require File.dirname(__FILE__) + '/../Expression'
 
 describe Expression do
@@ -78,7 +77,7 @@ describe Expression do
 			it "should work with the following" do
 				# this didn't used to work, because it woulnd't condense 5 and x^2 after it read the
 				# :+ in
-				Expression.add_parens("5*x^2 + 3*x").should == "(5 + (x ^ 2)) + (3 * x)"
+				Expression.add_parens("5*x^2 + 3*x").should == "(5 * (x ^ 2)) + (3 * x)"
 			end
 
 			it "should work on hybrid binary/unary expressions" do
@@ -110,6 +109,47 @@ describe Expression do
 
 		it "should be able to resolve numeric expressions multiple levels deep" do
 			@e2.resolve.should == @e2ans
+		end
+
+		describe "simplify_base" do
+			describe "with flat expressions" do 
+				it "should simplify x + 0 to x" do
+					Expression.from_s("0 + x").simplify_base.to_s.should == "x"
+				end
+
+				it "should simplify x - 0 to x" do
+					Expression.from_s("x - 0").simplify_base.to_s.should == "x"
+				end
+
+				it "should simplify x * 0 to 0" do
+					Expression.from_s("0 * x").simplify_base.to_s.should == "0"
+				end
+
+				it "should simplify x * 1 to x" do
+					Expression.from_s("1 * x").simplify_base.to_s.should == "x"
+				end
+
+				it "should simplify x / 1 to x" do
+					Expression.from_s("x / 1").simplify_base.to_s.should == "x"
+				end
+
+				it "should simplify 0 / x to 0" do
+					Expression.from_s("0 / x").simplify_base.to_s.should == "0"
+				end
+
+				it "should simplify x ^ 1 to x" do
+					Expression.from_s("x ^ 1").simplify_base.to_s.should == "x"
+				end
+
+				it "should simplify x ^ 0 to 1" do
+					Expression.from_s("x ^ 0").simplify_base.to_s.should == "1"
+				end
+			end
+			describe "with recursive expressions" do
+				it "should work" do
+					Expression.from_s("0*x + 22^4 * 0 + y^0 * y^1").simplify_base.to_s.should == "y"
+				end
+			end
 		end
 	end
 end
